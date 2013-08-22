@@ -26,8 +26,8 @@ kwargs = {
     # Test dependencies
     'tests_require': [
         'django-guardian==1.0.4',
-        'django-haystack==1.2.7',
-        'whoosh==2.4.1',
+        'django-haystack==2.1.0',
+        'whoosh==2.5.2',
         'openpyxl>=1.6,<1.7',
         'python-memcached>=1.48',
     ],
@@ -37,7 +37,7 @@ kwargs = {
         # Granular permission
         'permissions': ['django-guardian==1.0.4'],
         # Search
-        'search': ['django-haystack==1.2.7'],
+        'search': ['django-haystack>=2.0'],
         # Includes extra exporter dependencies
         'extras': ['openpyxl>=1.6,<1.7'],
     },
