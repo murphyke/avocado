@@ -76,25 +76,40 @@ class CommandsTestCase(TestCase):
         logging.getLogger().addHandler(log_handler)
 
         # Initialize patterns to match desired log messages against
+        migration_file_name = 'test_migration_file'
         fixture_pattern = re.compile('Created fixture \d{4}_avocado_metadata')
-        migration_pattern = re.compile('Created migration \d{4}_avocado_metadata_migration.py')
+        migration_pattern = re.compile('Created migration \d{4}_' + migration_file_name + '.py')
 
+        # Save and then update the default value for the metadata fixure
+        # directory.
+        new_fixture_dir = '/tmp/dir1/dir2/'
         original_fixture_dir = settings.METADATA_FIXTURE_DIR
-        settings.METADATA_FIXTURE_DIR = '/tmp/dir1/dir2/'
-        management.call_command('avocado', 'migration')
+        settings.METADATA_FIXTURE_DIR = new_fixture_dir
+
+        # Clear the temporary fixtures directory in case it already exists
+        os.popen('rm -rf {0}'.format(settings.METADATA_FIXTURE_DIR))
+
+        management.call_command('avocado', 'migration', migration_file_name)
+
         settings.METADATA_FIXTURE_DIR = original_fixture_dir
+
+        # Cleanup any files created as a result of the migration command
+        os.popen('rm -rf {0}'.format(new_fixture_dir))
+        os.popen('rm -f ./tests/cases/core/migrations/*_{0}.py'.format(migration_file_name))
+        os.popen('find ./tests/cases/core/fixtures/ ! -name 0001* -type f -delete')
 
         # Get a list of just the info messages and verify the length before
         # checking the individual messages.
         info_messages = log_handler.messages['info']
-        self.assertEqual(len(info_messages), 4)
+        self.assertEqual(len(info_messages), 5)
 
         # Make sure the individual log messages match the expected output or
         # at the very least the expected pattern of the output.
-        self.assertIsNotNone(fixture_pattern.match(info_messages[0]))
+        self.assertEqual(info_messages[0], 'Created fixture directory: {0}'.format(new_fixture_dir))
         self.assertIsNotNone(fixture_pattern.match(info_messages[1]))
-        self.assertIsNotNone(migration_pattern.match(info_messages[2]))
-        self.assertEqual(info_messages[3], 'Faked migrations up to the current one')
+        self.assertIsNotNone(fixture_pattern.match(info_messages[2]))
+        self.assertIsNotNone(migration_pattern.match(info_messages[3]))
+        self.assertEqual(info_messages[4], 'Faked migrations up to the current one')
 
     def test_legacy(self):
         from avocado.models import DataField
