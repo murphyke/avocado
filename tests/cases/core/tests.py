@@ -317,8 +317,8 @@ class BackupTestCase(TransactionTestCase):
         from avocado.core import backup
         management.call_command('avocado', 'migration')
         migration_dir = os.path.join(os.path.dirname(__file__), 'migrations')
-        self.assertTrue(os.path.exists(os.path.join(migration_dir, '0002_avocado_metadata_migration.py')))
-        os.remove(os.path.join(migration_dir, '0002_avocado_metadata_migration.py'))
+        self.assertTrue(os.path.exists(os.path.join(migration_dir, '0003_avocado_metadata_migration.py')))
+        os.remove(os.path.join(migration_dir, '0003_avocado_metadata_migration.py'))
         os.remove(os.path.join(backup.get_fixture_dir(), '0002_avocado_metadata.json'))
 
     def test_migration(self):
