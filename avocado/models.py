@@ -311,6 +311,36 @@ class DataField(BasePlural, PublishArchiveMixin):
         if self.lexicon:
             return tuple(self.model.objects.values_list('code', flat=True))
 
+    def choices_queryset(self):
+        """
+        Returns a ValuesListQuerySet of value and label.
+
+        For normal fields that are neither Lexicons nor ObjectSets,
+        the value and label are the same, and the results are
+        ordered by the field value.
+
+        For Lexicons, the value is the `id`, the label is the `label`, and the
+        results are ordered by the Lexicon's `order` field.
+
+        For ObjectSets, the value is the `id`, the label is the 'name', and the
+        results are ordered by the `id`.
+        """
+        if self.lexicon or self.objectset:
+            value_field = 'pk'
+            label_field = 'label' if self.lexicon else 'name'
+            order_field = 'order' if self.lexicon else 'pk'
+            apply_distinct = False
+        else:
+            value_field = self.field_name
+            label_field = self.field_name
+            order_field = self.field_name
+            apply_distinct = True
+
+        qs = self.model.objects.values_list(value_field, label_field)
+        if apply_distinct:
+            qs = qs.distinct()
+        return qs.order_by(order_field)
+
     def choices(self):
         "Returns a distinct set of choices for this field."
         return zip(self.values(), self.labels())
