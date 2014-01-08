@@ -46,7 +46,7 @@ class Command(BaseCommand):
                 'fixtures from. Defaults to the "default" database.'),
         make_option('--backup-path', action='store', dest='backup_path',
             help='Define a non-temporary path for the migration backup.'),
-        make_option('--no-fake', action='store_false',
+        make_option('--no-fake', action='store_true',
             help='Prevents the new migration from being immediately faked in the database.')
     )
 
