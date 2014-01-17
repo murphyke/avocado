@@ -1,7 +1,9 @@
 import inspect
+import logging
 from django.conf import settings
 from django.utils.importlib import import_module
 
+LOG = logging.getLogger(__package__)
 
 class AlreadyRegistered(Exception):
     pass
@@ -90,7 +92,14 @@ def autodiscover(module_name):
     """
     for app in settings.INSTALLED_APPS:
         # Attempt to import the app's ``module_name``.
+        app_mod = '{0}.{1}'.format(app, module_name)
         try:
-            import_module('{0}.{1}'.format(app, module_name))
-        except:
-            pass
+            import_module(app_mod)
+        except Exception as e:
+            if 'No module named' in str(e):
+                pass
+            else:
+                fmt = 'avocado autodiscover: {mod}: {exc}: {msg}'
+                LOG.warning(fmt.format(mod=app_mod,
+                                       exc=type(e).__name__,
+                                       msg=str(e)))
