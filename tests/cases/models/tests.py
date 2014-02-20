@@ -8,6 +8,7 @@ from django.core import management
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
+from django.db.models.query import ValuesListQuerySet
 from guardian.shortcuts import assign
 from avocado.models import (DataField, DataConcept, DataConceptField,
                             DataContext, DataView, DataQuery, DataCategory)
@@ -73,6 +74,94 @@ class DataFieldTestCase(TestCase):
         self.assertTrue(self.first_name.field)
         self.assertEqual(self.first_name.simple_type, 'string')
         self.assertEqual(self.first_name.nullable, False)
+
+
+class DataFieldChoicesQuerySetTestCase(TestCase):
+    """
+    Test DataField.choices_queryset
+    """
+    fixtures = ['employee_data.json', 'month_data.json']
+
+    def setUp(self):
+        management.call_command('avocado', 'init', 'tests', publish=False,
+                                concepts=False, quiet=True)
+
+    def test_regular_field(self):
+        for obj in DataField.objects.all():
+            print '{app}.{mod}.{fld}'.format(app=obj.app_name,
+                                             mod=obj.model_name,
+                                             fld=obj.field_name)
+        first_name_field = DataField.objects.get_by_natural_key('tests',
+                                                                'employee',
+                                                                'first_name')
+        qs = first_name_field.choices_queryset()
+        self.assertIsInstance(qs, ValuesListQuerySet)
+        expected = [(u'Aaron', u'Aaron'),
+                    (u'Eric', u'Eric'),
+                    (u'Erick', u'Erick'),
+                    (u'Erin', u'Erin'),
+                    (u'Mel', u'Mel'),
+                    (u'Zac', u'Zac')]
+        self.assertEqual(expected, list(qs))
+
+    def test_lexicon_field(self):
+        from ...models import Month
+        month_field = DataField.objects.get_by_natural_key('tests', 'month',
+                                                           'id')
+        self.assertTrue(month_field.lexicon)
+        qs = month_field.choices_queryset()
+        self.assertIsInstance(qs, ValuesListQuerySet)
+        expected = [(1, u'January'),
+                    (2, u'February'),
+                    (3, u'March'),
+                    (4, u'April'),
+                    (5, u'May'),
+                    (6, u'June'),
+                    (7, u'July'),
+                    (8, u'August'),
+                    (9, u'September'),
+                    (10, u'October'),
+                    (11, u'November'),
+                    (12, u'December')]
+        self.assertEqual(expected, list(qs))
+        # Now check ordering
+        for obj in Month.objects.all():
+            obj.order = 12 - obj.order
+            obj.save()
+        qs = month_field.choices_queryset()
+        self.assertIsInstance(qs, ValuesListQuerySet)
+        expected = [(12, u'December'),
+                    (11, u'November'),
+                    (10, u'October'),
+                    (9, u'September'),
+                    (8, u'August'),
+                    (7, u'July'),
+                    (6, u'June'),
+                    (5, u'May'),
+                    (4, u'April'),
+                    (3, u'March'),
+                    (2, u'February'),
+                    (1, u'January')]
+        self.assertEqual(expected, list(qs))
+
+    def test_objectset_field(self):
+        from ...models import RecordSet
+        [RecordSet(name=u'Set {0}'.format(i)).save() for i in xrange(10)]
+        f = DataField(app_name='tests', model_name='recordset',
+                      field_name='id')
+        qs = f.choices_queryset()
+        self.assertIsInstance(qs, ValuesListQuerySet)
+        expected = [(1, u'Set 0'),
+                    (2, u'Set 1'),
+                    (3, u'Set 2'),
+                    (4, u'Set 3'),
+                    (5, u'Set 4'),
+                    (6, u'Set 5'),
+                    (7, u'Set 6'),
+                    (8, u'Set 7'),
+                    (9, u'Set 8'),
+                    (10, u'Set 9')]
+        self.assertEqual(expected, list(qs))
 
 
 class DataFieldManagerTestCase(TestCase):
