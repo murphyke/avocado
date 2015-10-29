@@ -19,8 +19,3 @@ class DataIndex(indexes.SearchIndex):
 class DataConceptIndex(DataIndex, indexes.Indexable):
     def get_model(self):
         return DataConcept
-
-
-class DataFieldIndex(DataIndex, indexes.Indexable):
-    def get_model(self):
-        return DataField
