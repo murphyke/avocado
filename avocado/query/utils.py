@@ -209,7 +209,19 @@ def get_exporter_class(export_type):
     return exporters[export_type]
 
 
-def async_get_result_rows(context, view, query_options, job_options=None):
+def _evaluate_rows(job_dict):
+    """
+    Evaluate a Django queryset (job_dict['rows']).
+
+    `job_dict['rows']` is replaced by the result of `list(job_dict['rows'])`
+    (i.e. the results of a database query), and `job_dict` is returned.
+    """
+    job_dict['rows'] = list(job_dict['rows'])
+    return job_dict['rows']
+
+
+def async_get_result_rows(context, view, query_options, job_options=None,
+                          **kwargs):
     """
     Creates a new job to asynchronously get result rows and returns the job ID.
 
@@ -217,7 +229,9 @@ def async_get_result_rows(context, view, query_options, job_options=None):
         See get_result_rows argument list.
 
     Keyword Arugments:
-        Set as properties on the returned job's meta.
+        job_options: Set as properties on the returned job's meta.
+        **kwargs: pass to get_result_rows, ultimately to be passed to
+            the get_queryset() method of a QueryProcessor.
 
     Returns:
         The ID of the created job.
@@ -226,18 +240,18 @@ def async_get_result_rows(context, view, query_options, job_options=None):
         job_options = {}
 
     queue = get_queue(settings.ASYNC_QUEUE)
-    job = queue.enqueue(get_result_rows,
-                        context,
-                        view,
-                        query_options,
-                        evaluate_rows=True)
+    job_dict = get_result_rows(context, view, query_options,
+                               evaluate_rows=False, **kwargs)
+
+    job = queue.enqueue(_evaluate_rows, job_dict)
     job.meta.update(job_options)
     job.save()
 
     return job.id
 
 
-def get_result_rows(context, view, query_options, evaluate_rows=False):
+def get_result_rows(context, view, query_options, evaluate_rows=False,
+                    **kwargs):
     """
     Returns the result rows and options given the supplied arguments.
 
@@ -268,6 +282,8 @@ def get_result_rows(context, view, query_options, evaluate_rows=False):
             caller of this method actually needs an evaluated result set. An
             example of this is calling this method asynchronously which needs
             a pickleable return value(generators can't be pickled).
+        kwargs: Other kwargs allow custom QueryProcessor classes to modify the
+            query based on user-defined criteria.
 
     Returns:
         dict -- Result rows and relevant options used to calculate rows. These
@@ -320,7 +336,7 @@ def get_result_rows(context, view, query_options, evaluate_rows=False):
 
     QueryProcessor = pipeline.query_processors[processor_name]
     processor = QueryProcessor(context=context, view=view, tree=tree)
-    queryset = processor.get_queryset()
+    queryset = processor.get_queryset(**kwargs)
 
     # Isolate this query to a named connection. This will cancel an
     # outstanding queries of the same name if one is present.
