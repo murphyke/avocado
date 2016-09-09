@@ -109,11 +109,13 @@ def instance_cache_key(instance, label=None, version=None, args=None,
 
     opts = instance._meta
     key = [opts.app_label, opts.module_name, instance.pk]
+    logger.debug('instance_cache_key key = ({}, {}, {})'.format(opts.app_label, opts.module_name, str(instance)))
 
     if label is not None:
         key.append(label)
 
     label = cache_key_func(key)
+    logger.debug('instance_cache_key label = {}, queryset = "{}"'.format(label, kwargs['queryset'].all().query))
 
     return cache_key(label=label, version=version, args=args, kwargs=kwargs)
 
