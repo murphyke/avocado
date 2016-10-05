@@ -115,7 +115,18 @@ def instance_cache_key(instance, label=None, version=None, args=None,
 
     label = cache_key_func(key)
 
-    return cache_key(label=label, version=version, args=args, kwargs=kwargs)
+    ck = cache_key(label=label, version=version, args=args, kwargs=kwargs)
+
+    if 'queryset' in kwargs and kwargs['queryset']:
+        qs = kwargs['queryset'].query
+    else:
+        qs = '(none)'
+    logger.debug(
+        'instance_cache_key {}: key = {}, ver = {}, args = {}, queryset = {'
+        '}'.format(
+            ck, key, version, args, qs))
+
+    return ck
 
 
 def cached_method(func=None, version=None, timeout=NEVER_EXPIRE,
